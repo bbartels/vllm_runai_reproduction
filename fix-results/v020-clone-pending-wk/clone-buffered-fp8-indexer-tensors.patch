@@ -1,0 +1,24 @@
+From 39acbf39c371c474d505590e42efc144e6dcd955 Mon Sep 17 00:00:00 2001
+From: Benjamin Bartels <benjaminba@latpoc32.ilab.local>
+Date: Tue, 19 May 2026 02:38:37 +0000
+Subject: [PATCH] Clone buffered FP8 indexer tensors
+
+---
+ vllm/model_executor/models/deepseek_v2.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/vllm/model_executor/models/deepseek_v2.py b/vllm/model_executor/models/deepseek_v2.py
+index d91a41eaa..73472c1a1 100644
+--- a/vllm/model_executor/models/deepseek_v2.py
++++ b/vllm/model_executor/models/deepseek_v2.py
+@@ -744,7 +744,7 @@ def _try_load_fp8_indexer_wk(name, tensor, buf, params_dict, loaded_params):
+     # Buffer this tensor (weight or scale) until both have arrived.
+     layer_prefix = name.rsplit(".wk.", 1)[0]  # e.g. "model.layers.0.self_attn.indexer"
+     entry = buf.setdefault(layer_prefix, {})
+-    entry["weight" if is_weight else "scale"] = tensor
++    entry["weight" if is_weight else "scale"] = tensor.clone()
+     if "weight" not in entry or "scale" not in entry:
+         return True  # still waiting for the other param
+
+--
+2.43.0
