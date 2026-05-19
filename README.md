@@ -126,6 +126,42 @@ Potentially relevant commits from that window:
 - `03f8d3a54` transformers v5 migration
 - `ac3dac54` indexer upcast for fusion
 
+## Exact Culprit And Fix
+
+A host-Python source bisect with `VLLM_USE_PRECOMPILED=1` narrowed the exact first bad commit to:
+
+```text
+ac3dac545 [Bugfix][Perf] Indexer upcast WK to BF16 for fusion (#38928)
+```
+
+Immediate boundary:
+
+| Commit | Result |
+| --- | --- |
+| `39ac64049` `[Bug] Fix batch invariant test issue, bs=1 with max_seq_num = 1 (#39320)` | good |
+| `ac3dac545` `[Bugfix][Perf] Indexer upcast WK to BF16 for fusion (#38928)` | bad |
+
+The likely root cause is that `ac3dac545` buffers RunAI-streamed FP8 indexer `wk` weight/scale tensors for delayed BF16 dequantization without cloning them. RunAI Model Streamer can reuse backing buffers while iterating weights, so the delayed dequantization can consume overwritten tensor contents.
+
+Minimal validated fix:
+
+```diff
+-entry["weight" if is_weight else "scale"] = tensor
++entry["weight" if is_weight else "scale"] = tensor.clone()
+```
+
+Validation results:
+
+| Case | Result |
+| --- | --- |
+| `18013df6a` unpatched | bad |
+| `18013df6a` with full revert of `ac3dac545` | good |
+| `18013df6a` with one-line clone fix | good |
+| `v0.20.0` unpatched | bad |
+| `v0.20.0` with one-line clone fix | good |
+
+Detailed artifacts are in `bisect-results/` and `fix-results/`.
+
 ## Notes
 
 The `runai-model-streamer` package version did not change between the v0.19 and v0.20 Docker images inspected:
