@@ -29,6 +29,7 @@ export PATH="$CUDA_HOME/bin:$PATH"
 mkdir -p "$OUT_ROOT"
 FULL_COMMIT="$(git -C "$SRC" rev-parse "$COMMIT")"
 SHORT_COMMIT="$(git -C "$SRC" rev-parse --short=9 "$FULL_COMMIT")"
+PRECOMPILED_WHEEL_COMMIT="${PRECOMPILED_WHEEL_COMMIT:-$FULL_COMMIT}"
 OUT_DIR="$OUT_ROOT/$SHORT_COMMIT"
 mkdir -p "$OUT_DIR"
 
@@ -60,6 +61,7 @@ stop_server
 
 {
   echo "commit=$FULL_COMMIT"
+  echo "precompiled_wheel_commit=$PRECOMPILED_WHEEL_COMMIT"
   git -C "$SRC" show -s --format='subject=%s%ncommit_date=%cI' "$FULL_COMMIT"
   echo "started_at=$(date -Iseconds)"
 } >"$OUT_DIR/meta.txt"
@@ -69,7 +71,7 @@ git -C "$SRC" checkout --detach "$FULL_COMMIT" >>"$INSTALL_LOG" 2>&1
 (
   cd "$SRC"
   export VLLM_USE_PRECOMPILED=1
-  export VLLM_PRECOMPILED_WHEEL_COMMIT="$FULL_COMMIT"
+  export VLLM_PRECOMPILED_WHEEL_COMMIT="$PRECOMPILED_WHEEL_COMMIT"
   if ! "$UV" pip install --python "$PYTHON" --torch-backend=auto -e .; then
     echo "commit-specific precompiled install failed; retrying with VLLM_PRECOMPILED_WHEEL_COMMIT=nightly" >&2
     export VLLM_PRECOMPILED_WHEEL_COMMIT=nightly
