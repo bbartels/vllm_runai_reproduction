@@ -20,7 +20,11 @@ MAX_TIME="${MAX_TIME:-60}"
 READY_TIMEOUT="${READY_TIMEOUT:-900}"
 HF_HOME_DIR="${HF_HOME_DIR:-/home/benjaminba/.cache/huggingface}"
 REPRO_SCRIPT="${REPRO_SCRIPT:-/home/benjaminba/opencode-repro/repro-hi-tools-1-5.sh}"
+CUDA_HOME_DIR="${CUDA_HOME_DIR:-/usr/local/cuda-13.0}"
 PID_FILE="/tmp/vllm-bisect-server.pid"
+
+export CUDA_HOME="$CUDA_HOME_DIR"
+export PATH="$CUDA_HOME/bin:$PATH"
 
 mkdir -p "$OUT_ROOT"
 FULL_COMMIT="$(git -C "$SRC" rev-parse "$COMMIT")"
@@ -101,6 +105,8 @@ PY
 
 setsid env \
   HF_HOME="$HF_HOME_DIR" \
+  CUDA_HOME="$CUDA_HOME" \
+  PATH="$PATH" \
   VLLM_DEEP_GEMM_WARMUP=skip \
   VLLM_LOGGING_LEVEL=INFO \
   "$VENV/bin/vllm" serve zai-org/GLM-5.1-FP8 \
